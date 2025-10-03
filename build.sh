@@ -71,12 +71,27 @@ else
     echo "    💡 To build for macOS: run this script on a Mac or use GitHub Actions"
 fi
 
+# Build web app if package.json exists
+if [ -f "package.json" ]; then
+    echo "🌐 Building web app..."
+    if command -v bun &> /dev/null; then
+        bun install && bun run build
+        echo "    ✅ Web app built with Bun"
+    elif command -v npm &> /dev/null; then
+        npm install && npm run build
+        echo "    ✅ Web app built with npm"
+    else
+        echo "    ⚠️  No package manager found (bun/npm), skipping web build"
+    fi
+fi
+
 # Copy dist directory to each build (if it exists)
 if [ -d "dist" ]; then
     echo "📂 Copying dist directory to builds..."
     cp -r dist "$BUILD_DIR/linux/"
     cp -r dist "$BUILD_DIR/darwin/"
     cp -r dist "$BUILD_DIR/windows/"
+    cp -r dist "$BUILD_DIR/native/"
     echo "    ✅ Dist directories copied"
 fi
 

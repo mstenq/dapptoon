@@ -35,6 +35,17 @@ jobs:
       with:
         go-version: '1.21'
 
+    - name: Set up Bun
+      uses: oven-sh/setup-bun@v1
+      with:
+        bun-version: latest
+
+    - name: Install web app dependencies
+      run: bun install
+
+    - name: Build web app
+      run: bun run build
+
     - name: Install dependencies (Linux)
       if: matrix.os == 'ubuntu-latest'
       run: |
@@ -53,11 +64,17 @@ jobs:
         go mod tidy
         ${{ matrix.build_args }} go build -v -o ${{ matrix.artifact_name }} ./main.go
 
+    - name: Create distribution package
+      run: |
+        mkdir -p dist-package
+        cp ${{ matrix.artifact_name }} dist-package/
+        cp -r dist dist-package/
+        
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
         name: ${{ matrix.artifact_name }}
-        path: ${{ matrix.artifact_name }}
+        path: dist-package/
 
   release:
     needs: build
@@ -67,10 +84,19 @@ jobs:
     - name: Download all artifacts
       uses: actions/download-artifact@v4
       
+    - name: Create release packages
+      run: |
+        for dir in */; do
+          artifact_name=$(basename "$dir")
+          cd "$dir"
+          zip -r "../${artifact_name}.zip" .
+          cd ..
+        done
+      
     - name: Release
       uses: softprops/action-gh-release@v1
       with:
         files: |
-          **/dapptoon-*
+          *.zip
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
