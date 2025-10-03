@@ -54,7 +54,7 @@ jobs:
         go build -v -o ${{ matrix.artifact_name }} ./main.go
 
     - name: Upload artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ${{ matrix.artifact_name }}
         path: ${{ matrix.artifact_name }}
@@ -65,7 +65,7 @@ jobs:
     if: github.event_name == 'release'
     steps:
     - name: Download all artifacts
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       
     - name: Release
       uses: softprops/action-gh-release@v1
