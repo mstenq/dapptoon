@@ -5,6 +5,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"os"
 	"os/exec"
 	"runtime"
 	"strings"
@@ -55,6 +56,10 @@ func startServer() {
 }
 
 func onReady() {
+	// Load icon from file
+	if iconData, err := os.ReadFile("tray_icon.png"); err == nil {
+		systray.SetIcon(iconData)
+	}
 	systray.SetTitle("React Server")
 	systray.SetTooltip("Serving your React app")
 

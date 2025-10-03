@@ -42,7 +42,7 @@ fi
 
 # Build for Windows (64-bit) - works from any platform  
 echo "  🪟 Building for Windows amd64..."
-CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -o "$BUILD_DIR/windows/${APP_NAME}.exe" main.go
+GO111MODULE=on CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags "-H=windowsgui" -o "$BUILD_DIR/windows/${APP_NAME}.exe" main.go
 if [ $? -eq 0 ]; then
     echo "    ✅ Windows build successful"
 else
@@ -93,6 +93,16 @@ if [ -d "dist" ]; then
     cp -r dist "$BUILD_DIR/windows/"
     cp -r dist "$BUILD_DIR/native/"
     echo "    ✅ Dist directories copied"
+fi
+
+# Copy icon file to each build (if it exists)
+if [ -f "tray_icon.png" ]; then
+    echo "🎨 Copying icon file to builds..."
+    cp tray_icon.png "$BUILD_DIR/linux/"
+    cp tray_icon.png "$BUILD_DIR/darwin/"
+    cp tray_icon.png "$BUILD_DIR/windows/"
+    cp tray_icon.png "$BUILD_DIR/native/"
+    echo "    ✅ Icon file copied"
 fi
 
 # Display build sizes

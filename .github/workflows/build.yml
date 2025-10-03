@@ -60,15 +60,23 @@ jobs:
     - name: Build
       env:
         CGO_ENABLED: 1
+        GO111MODULE: on
       run: |
         go mod tidy
-        ${{ matrix.build_args }} go build -v -o ${{ matrix.artifact_name }} ./main.go
+        if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+          ${{ matrix.build_args }} go build -v -ldflags "-H=windowsgui" -o ${{ matrix.artifact_name }} ./main.go
+        else
+          ${{ matrix.build_args }} go build -v -o ${{ matrix.artifact_name }} ./main.go
+        fi
 
     - name: Create distribution package
       run: |
         mkdir -p dist-package
         cp ${{ matrix.artifact_name }} dist-package/
         cp -r dist dist-package/
+        if [ -f tray_icon.png ]; then
+          cp tray_icon.png dist-package/
+        fi
         
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
