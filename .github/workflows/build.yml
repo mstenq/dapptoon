@@ -75,7 +75,17 @@ jobs:
         go mod tidy
         ${{ matrix.build_args }} go build -v -o ${{ matrix.artifact_name }} ./main.go
 
-    - name: Create distribution package
+    - name: Create distribution package (Windows)
+      if: matrix.os == 'windows-latest'
+      run: |
+        mkdir dist-package
+        copy ${{ matrix.artifact_name }} dist-package\
+        xcopy dist dist-package\dist\ /E /I
+        if (Test-Path tray_icon.png) { copy tray_icon.png dist-package\ }
+      shell: pwsh
+
+    - name: Create distribution package (Unix)
+      if: matrix.os != 'windows-latest'
       run: |
         mkdir -p dist-package
         cp ${{ matrix.artifact_name }} dist-package/
