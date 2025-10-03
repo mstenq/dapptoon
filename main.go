@@ -1,11 +1,12 @@
 package main
 
 import (
+	"embed"
 	"fmt"
+	"io/fs"
 	"log"
 	"net"
 	"net/http"
-	"os"
 	"os/exec"
 	"runtime"
 	"strings"
@@ -13,6 +14,12 @@ import (
 	"github.com/getlantern/systray"
 	"github.com/skip2/go-qrcode"
 )
+
+//go:embed dist/*
+var distFiles embed.FS
+
+//go:embed tray_icon.png
+var iconData []byte
 
 var lanURL string
 
@@ -47,7 +54,14 @@ func getLANIP() string {
 }
 
 func startServer() {
-	fs := http.FileServer(http.Dir("./dist"))
+	// Get the embedded dist subdirectory
+	distFS, err := fs.Sub(distFiles, "dist")
+	if err != nil {
+		log.Fatal("Failed to get dist subdirectory:", err)
+	}
+
+	// Serve the embedded files
+	fs := http.FileServer(http.FS(distFS))
 	http.Handle("/", fs)
 
 	go func() {
@@ -56,10 +70,8 @@ func startServer() {
 }
 
 func onReady() {
-	// Load icon from file
-	if iconData, err := os.ReadFile("tray_icon.png"); err == nil {
-		systray.SetIcon(iconData)
-	}
+	// Use embedded icon
+	systray.SetIcon(iconData)
 	systray.SetTitle("React Server")
 	systray.SetTooltip("Serving your React app")
 

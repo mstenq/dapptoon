@@ -85,25 +85,8 @@ if [ -f "package.json" ]; then
     fi
 fi
 
-# Copy dist directory to each build (if it exists)
-if [ -d "dist" ]; then
-    echo "📂 Copying dist directory to builds..."
-    cp -r dist "$BUILD_DIR/linux/"
-    cp -r dist "$BUILD_DIR/darwin/"
-    cp -r dist "$BUILD_DIR/windows/"
-    cp -r dist "$BUILD_DIR/native/"
-    echo "    ✅ Dist directories copied"
-fi
-
-# Copy icon file to each build (if it exists)
-if [ -f "tray_icon.png" ]; then
-    echo "🎨 Copying icon file to builds..."
-    cp tray_icon.png "$BUILD_DIR/linux/"
-    cp tray_icon.png "$BUILD_DIR/darwin/"
-    cp tray_icon.png "$BUILD_DIR/windows/"
-    cp tray_icon.png "$BUILD_DIR/native/"
-    echo "    ✅ Icon file copied"
-fi
+# Files are now embedded in the binary, no need to copy external files
+echo "📦 All web assets and icons are embedded in the executable"
 
 # Display build sizes
 echo ""
