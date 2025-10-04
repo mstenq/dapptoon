@@ -5,6 +5,7 @@ import { Peerbit } from "peerbit";
 import { sha256Sync } from "@peerbit/crypto";
 import { useEffect, useState, useCallback } from "react";
 import { v4 as uuid } from "uuid";
+import "./App.css";
 
 // Enhanced Post class with more blog-like properties
 @variant(0) // version 0
@@ -126,6 +127,7 @@ interface AppState {
   isLoading: boolean;
   error: string | null;
   connectedPeers: number;
+  deletingPostIds: Record<string, boolean>;
 }
 
 export function App() {
@@ -137,6 +139,7 @@ export function App() {
     isLoading: true,
     error: null,
     connectedPeers: 0,
+    deletingPostIds: {},
   });
 
   const [newPost, setNewPost] = useState({
@@ -279,6 +282,44 @@ export function App() {
     }
   }, [state.store, newPost, loadPosts]);
 
+  // Delete an existing post
+  const deletePost = useCallback(async (postId: string) => {
+    const store = state.store;
+    if (!store || !postId) {
+      return;
+    }
+
+    // Track deletion state
+    setState(prev => ({
+      ...prev,
+      error: null,
+      deletingPostIds: { ...prev.deletingPostIds, [postId]: true },
+    }));
+
+    try {
+      await store.posts.del(postId);
+
+      // Reload posts after a short delay to allow for propagation
+      setTimeout(async () => {
+        await loadPosts(store);
+      }, 300);
+    } catch (error) {
+      console.error("Failed to delete post:", error);
+      setState(prev => ({
+        ...prev,
+        error: "Failed to delete post",
+      }));
+    } finally {
+      setState(prev => {
+        const { [postId]: _removed, ...remaining } = prev.deletingPostIds;
+        return {
+          ...prev,
+          deletingPostIds: remaining,
+        };
+      });
+    }
+  }, [state.store, loadPosts]);
+
   // Initialize on component mount
   useEffect(() => {
     initializePeer();
@@ -301,103 +342,117 @@ export function App() {
 
   if (state.isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Connecting to Peerbit network...</p>
+      <div className="app app--loading">
+        <div className="loading-panel">
+          <div className="loading-spinner" />
+          <p className="loading-text">Connecting to Peerbit network...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-4xl mx-auto px-4 py-6">
-          <div className="flex justify-between items-center">
-            <h1 className="text-3xl font-bold text-gray-900">Dapptoon P2P Blog</h1>
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
-                <div className={`w-3 h-3 rounded-full ${state.isConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                <span className="text-sm text-gray-600">
-                  {state.isConnected ? 'Connected' : 'Disconnected'}
+    <div className="app">
+      <header className="app__header">
+        <div className="container">
+          <div className="header__bar">
+            <h1 className="logo">Dapptoon P2P Blog</h1>
+            <div className="status">
+              <div className="status__cluster">
+                <span
+                  className={`status__indicator ${state.isConnected ? "status__indicator--online" : "status__indicator--offline"}`}
+                />
+                <span className="status__label">
+                  {state.isConnected ? "Connected" : "Disconnected"}
                 </span>
               </div>
-              <div className="text-sm text-gray-600">
-                Peers: {state.connectedPeers}
-              </div>
+              <div className="status__peers">Peers: {state.connectedPeers}</div>
             </div>
           </div>
           {state.error && (
-            <div className="mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
-              {state.error}
-            </div>
+            <div className="alert alert--error">{state.error}</div>
           )}
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-4 py-8">
-        {/* Create Post Form */}
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
-          <h2 className="text-xl font-semibold mb-4">Create New Post</h2>
-          <div className="space-y-4">
-            <input
-              type="text"
-              placeholder="Your name"
-              value={newPost.author}
-              onChange={(e) => setNewPost(prev => ({ ...prev, author: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <input
-              type="text"
-              placeholder="Post title"
-              value={newPost.title}
-              onChange={(e) => setNewPost(prev => ({ ...prev, title: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <textarea
-              placeholder="Write your post content..."
-              value={newPost.content}
-              onChange={(e) => setNewPost(prev => ({ ...prev, content: e.target.value }))}
-              rows={4}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <button
-              onClick={createPost}
-              disabled={!newPost.title.trim() || !newPost.content.trim() || !newPost.author.trim()}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
-            >
-              Publish Post
-            </button>
-          </div>
-        </div>
-
-        {/* Posts List */}
-        <div className="space-y-6">
-          <h2 className="text-2xl font-semibold">Recent Posts ({state.posts.length})</h2>
-          
-          {state.posts.length === 0 ? (
-            <div className="bg-white rounded-lg shadow-sm p-8 text-center">
-              <p className="text-gray-500">No posts yet. Be the first to create one!</p>
+      <main className="app__main">
+        <div className="container">
+          <section className="panel panel--form">
+            <h2 className="panel__title">Create New Post</h2>
+            <div className="form">
+              <input
+                type="text"
+                placeholder="Your name"
+                value={newPost.author}
+                onChange={(e) => setNewPost(prev => ({ ...prev, author: e.target.value }))}
+                className="field"
+              />
+              <input
+                type="text"
+                placeholder="Post title"
+                value={newPost.title}
+                onChange={(e) => setNewPost(prev => ({ ...prev, title: e.target.value }))}
+                className="field"
+              />
+              <textarea
+                placeholder="Write your post content..."
+                value={newPost.content}
+                onChange={(e) => setNewPost(prev => ({ ...prev, content: e.target.value }))}
+                rows={4}
+                className="field field--textarea"
+              />
+              <button
+                onClick={createPost}
+                disabled={!newPost.title.trim() || !newPost.content.trim() || !newPost.author.trim()}
+                className="button button--primary"
+              >
+                Publish Post
+              </button>
             </div>
-          ) : (
-            state.posts.map((post) => (
-              <article key={post.id} className="bg-white rounded-lg shadow-sm p-6">
-                <header className="mb-4">
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2">{post.title}</h3>
-                  <div className="flex items-center text-sm text-gray-500 space-x-4">
-                    <span>By {post.author}</span>
-                    <span>•</span>
-                    <span>{formatTimestamp(post.timestamp)}</span>
-                  </div>
-                </header>
-                <div className="prose prose-gray max-w-none">
-                  <p className="whitespace-pre-wrap">{post.content}</p>
-                </div>
-              </article>
-            ))
-          )}
+          </section>
+
+          <section className="panel panel--posts">
+            <div className="panel__heading">
+              <h2 className="section-title">Recent Posts ({state.posts.length})</h2>
+            </div>
+
+            {state.posts.length === 0 ? (
+              <div className="empty-state">
+                <p className="empty-state__text">No posts yet. Be the first to create one!</p>
+              </div>
+            ) : (
+              <div className="posts">
+                {state.posts.map((post) => (
+                  <article key={post.id} className="post-card">
+                    <header className="post-card__header">
+                      <div className="post-card__header-main">
+                        <h3 className="post-card__title">{post.title}</h3>
+                        <div className="post-card__meta">
+                          <span className="post-card__author">By {post.author}</span>
+                          <span className="post-card__dot">•</span>
+                          <span className="post-card__time">{formatTimestamp(post.timestamp)}</span>
+                        </div>
+                      </div>
+                      <button
+                        className="button button--danger post-card__delete"
+                        disabled={!!state.deletingPostIds[post.id]}
+                        type="button"
+                        onClick={() => {
+                          if (window.confirm("Delete this post? This action cannot be undone.")) {
+                            deletePost(post.id);
+                          }
+                        }}
+                        aria-label={`Delete post titled ${post.title}`}
+                      >
+                        {state.deletingPostIds[post.id] ? "Deleting..." : "Delete"}
+                      </button>
+                    </header>
+                    <div className="post-card__content">{post.content}</div>
+                  </article>
+                ))}
+              </div>
+            )}
+          </section>
         </div>
       </main>
     </div>
