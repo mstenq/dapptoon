@@ -40,6 +40,22 @@ export default defineConfig({
         commonjsOptions: {
             transformMixedEsModules: true,
         },
+        rollupOptions: {
+            output: {
+                // Ensure clean output directory structure
+                assetFileNames: (assetInfo) => {
+                    // Prevent any node_modules from being copied
+                    if (assetInfo.name && assetInfo.name.includes('node_modules')) {
+                        return 'assets/[name].[hash][extname]';
+                    }
+                    return 'assets/[name].[hash][extname]';
+                }
+            }
+        },
+        // Ensure only embeddable files are included
+        copyPublicDir: true,
+        // Explicitly exclude problematic directories
+        outDir: 'dist',
     },
     
     define: {

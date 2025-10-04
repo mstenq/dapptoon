@@ -8,7 +8,8 @@
         "dev": "vite --host",
         "start": "vite",
         "start-remote": "vite --mode staging --config vite.config.remote.ts",
-        "build": "tsc && vite build",
+        "build": "tsc && vite build && npm run clean-dist",
+        "clean-dist": "rm -rf dist/node_modules",
         "preview": "vite preview",
         "deploy": "yarn build && NODE_DEBUG=gh-pages gh-pages -d dist"
     },
